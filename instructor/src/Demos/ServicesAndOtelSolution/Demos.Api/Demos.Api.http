@@ -1,0 +1,9 @@
+@Demos.Api_HostAddress = http://localhost:5289
+
+GET {{Demos.Api_HostAddress}}/
+Accept: application/json
+
+###
+
+
+POST {{Demos.Api_HostAddress}}/
