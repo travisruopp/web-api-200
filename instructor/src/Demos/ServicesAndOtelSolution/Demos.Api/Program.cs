@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 //builder.Services.AddScoped<ClassDataService>(sp =>
 //{
-//    var options = new ClassDataServiceOptions { ConnectionString = "someDb", MaxStudents = 25, MinStucents = 8 };
+//    var options = new ClassDataServiceOptions { ConnectionString = "someDb", MaxStudents = 25, MinStudents = 8 };
 //    return new ClassDataService(options);
 
 //});
@@ -16,25 +16,27 @@ var builder = WebApplication.CreateBuilder(args);
 //    o.MinStudents = 8;
 //    o.MaxStudents = 16;
 //});
-var config = builder.Configuration.GetSection(ClassDataServiceOptions.OptionsName);
-builder.Services.AddSingleton(config!); 
+//var config = builder.Configuration.GetSection(ClassDataServiceOptions.OptionsName);
+var classOptions = new ClassDataServiceOptions();
+builder.Configuration.GetSection(ClassDataServiceOptions.OptionsName).Bind(classOptions);
+// You can also do this so it can "watch" your configuraton. - Be careful with this.
+builder.Services.AddSingleton<ClassDataServiceOptions>(classOptions); 
 
-builder.Services.AddSingleton<ClassDataService>();
+builder.Services.AddScoped<ClassDataService>();
 
 
 builder.Services.AddControllers();
 //builder.Services.AddTransient<HitCounter>(); // create a new one of these EVERY TIME any controller or service needs the HitCounter.
 //builder.Services.AddScoped<HitCounter>(); // Create a new one of these for each request.
+
+
+// Just a single instance - shared across everything (ever request, every usage)
 builder.Services.AddSingleton<ICountHits>(sp =>
 {
-    // this method is still "lazy" it's not going to run this until the ICountHits is injected somewhere
     var id = Guid.Parse("b37bd889-591a-40b0-b97b-00f007866607");
     var ssf = sp.GetRequiredService<IServiceScopeFactory>();
-
     return new PersistentHitCounter(id, ssf);
-
-}); // Just a single instance - shared across everything (ever request, every usage)
-//builder.Services.AddSingleton<ICountHits, PersistentHitCounter>();
+});
 Dictionary<string, decimal> lookedupPrices = new()
 {
     { "eggs", 2.99M }
@@ -71,9 +73,10 @@ app.Use(async (context, next) =>
     Console.Write("Response content-type is", mt);
     Console.WriteLine("Sending a Response");
 });
+
 app.MapControllers(); // Look at the request for the method and the path, and direct to the right place.
 app.Run();
-
+    
 
 
 public class SomeSlowStartingService
@@ -93,11 +96,11 @@ public class SomeSlowStartingService
 
 public class  ClassDataService
 {
-    public ClassDataService(IOptions<ClassDataServiceOptions> options)
+    public ClassDataService(ClassDataServiceOptions options)
     {
         // use those options to set up this service.
-        var cs = options.Value;
-        var x = cs.ConnectionString;
+        
+        var x = options.ConnectionString;
     }
     // use that stuff in here.
 }
@@ -105,8 +108,8 @@ public class  ClassDataService
 public class ClassDataServiceOptions
 {
     public string ConnectionString { get; set; } = string.Empty;
-    public int MaxStudents { get;  set; }
-    public int MinStudents { get;  set; }
+    public int MaxStudents { get; set; } = 16;
+    public int MinStudents { get; set; } = 8;
 
     public static string OptionsName = "ClassDataService";
 };
